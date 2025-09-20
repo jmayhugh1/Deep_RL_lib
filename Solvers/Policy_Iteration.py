@@ -1,6 +1,6 @@
 # Licensing Information:  You are free to use or extend this codebase for
 # educational purposes provided that (1) you do not distribute or publish
-# solutions, (2) you retain this notice, and (3) inform Guni Sharon at 
+# solutions, (2) you retain this notice, and (3) inform Guni Sharon at
 # guni@tamu.edu regarding your usage (relevant statistics is reported to NSF).
 # The development of this assignment was supported by NSF (IIS-2238979).
 # Contributors:
@@ -9,6 +9,7 @@
 import numpy as np
 from Solvers.Abstract_Solver import AbstractSolver, Statistics
 
+
 def get_random_policy(num_states, num_actions):
     policy = np.zeros([num_states, num_actions])
     for s_idx in range(num_states):
@@ -16,12 +17,16 @@ def get_random_policy(num_states, num_actions):
         policy[s_idx, action] = 1
     return policy
 
+
 class PolicyIteration(AbstractSolver):
 
     def __init__(self, env, eval_env, options):
-        assert str(env.observation_space).startswith( 'Discrete' ), str(self) + \
-                                                                    " cannot handle non-discrete state spaces"
-        assert str(env.action_space).startswith('Discrete'), str(self) + " cannot handle non-discrete action spaces"
+        assert str(env.observation_space).startswith("Discrete"), (
+            str(self) + " cannot handle non-discrete state spaces"
+        )
+        assert str(env.action_space).startswith("Discrete"), (
+            str(self) + " cannot handle non-discrete action spaces"
+        )
         super().__init__(env, eval_env, options)
         self.V = np.zeros(env.observation_space.n)
         # Start with a random policy
@@ -31,19 +36,19 @@ class PolicyIteration(AbstractSolver):
 
     def train_episode(self):
         """
-            Run a single Policy iteration. Evaluate and improve the policy.
+        Run a single Policy iteration. Evaluate and improve the policy.
 
-            Use:
-                self.policy: [S, A] shaped matrix representing the policy.
-                             self.policy[s,a] denotes \pi(a|s)
-                             Note: Policy is determistic i.e., only one element in self.policy[s,:] is 1 rest are 0
-                self.env: OpenAI environment.
-                    env.P represents the transition probabilities of the environment.
-                    env.P[s][a] is a list of transition tuples (prob, next_state, reward, done).
-                    env.observation_space.n is the number of states in the environment.
-                    env.action_space.n is the number of actions in the environment.
-                self.options.gamma: Gamma discount factor.
-                np.eye(self.env.action_space.n)[action]
+        Use:
+            self.policy: [S, A] shaped matrix representing the policy.
+                         self.policy[s,a] denotes \pi(a|s)
+                         Note: Policy is determistic i.e., only one element in self.policy[s,:] is 1 rest are 0
+            self.env: OpenAI environment.
+                env.P represents the transition probabilities of the environment.
+                env.P[s][a] is a list of transition tuples (prob, next_state, reward, done).
+                env.observation_space.n is the number of states in the environment.
+                env.action_space.n is the number of actions in the environment.
+            self.options.gamma: Gamma discount factor.
+            np.eye(self.env.action_space.n)[action]
         """
 
         # Evaluate the current policy
@@ -106,12 +111,12 @@ class PolicyIteration(AbstractSolver):
         ################################
         # the policy is given by self.policy
         num_states = self.env.observation_space.n
-        A = np.eye(num_states)              
+        A = np.eye(num_states)
         b = np.zeros(num_states)
         for s in range(num_states):
-            a = np.argmax(self.policy[s])  
+            a = np.argmax(self.policy[s])
             for prob, next_state, reward, done in self.env.P[s][a]:
-                A[s, next_state] -= self.options.gamma * (1 if prob > 0 else 0)
+                A[s, next_state] -= self.options.gamma * prob
                 b[s] += prob * reward
         self.V = np.linalg.solve(A, b)
 
@@ -123,6 +128,7 @@ class PolicyIteration(AbstractSolver):
         Returns:
             A function that takes an observation as input and greedy action as integer
         """
+
         def policy_fn(state):
             return np.argmax(self.policy[state])
 
