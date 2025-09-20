@@ -1,6 +1,6 @@
 # Licensing Information:  You are free to use or extend this codebase for
 # educational purposes provided that (1) you do not distribute or publish
-# solutions, (2) you retain this notice, and (3) inform Guni Sharon at 
+# solutions, (2) you retain this notice, and (3) inform Guni Sharon at
 # guni@tamu.edu regarding your usage (relevant statistics is reported to NSF).
 # The development of this assignment was supported by NSF (IIS-2238979).
 # Contributors:
@@ -71,6 +71,8 @@ class ValueIteration(AbstractSolver):
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
+            q = self.one_step_lookahead(each_state)
+            self.V[each_state] = np.max(q)
 
         # Dont worry about this part
         self.statistics[Statistics.Rewards.value] = np.sum(self.V)
@@ -141,6 +143,8 @@ class ValueIteration(AbstractSolver):
             #   YOUR IMPLEMENTATION HERE   #
             ################################
             
+            values = self.one_step_lookahead(state)  
+            return int(np.argmax(values)) 
 
         return policy_fn
 
@@ -192,6 +196,25 @@ class AsynchVI(ValueIteration):
         # Do a one-step lookahead to find the best action       #
         # Update the value function. Ref: Sutton book eq. 4.10. #
         #########################################################
+        # if the pq is empty ehn you have to re update it with priorities
+        if self.pq.isEmpty():
+            for s in range(self.env.observation_space.n):
+                A = self.one_step_lookahead(s)
+                target = np.max(A)
+                self.pq.update(s, -abs(self.V[s] - target))
+                
+        # take the highest priority state and update its value
+        # then update the priorities of its preds
+        s = self.pq.pop()
+        A = self.one_step_lookahead(s)
+        self.V[s] = np.max(A)
+
+        if s in self.pred:
+            for p in self.pred[s]:
+                A_p = self.one_step_lookahead(p)
+                target_p = np.max(A_p)
+                self.pq.update(p, -abs(self.V[p] - target_p))
+                
 
         # you can ignore this part
         self.statistics[Statistics.Rewards.value] = np.sum(self.V)
