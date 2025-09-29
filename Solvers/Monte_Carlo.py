@@ -197,6 +197,27 @@ class OffPolicyMC(MonteCarlo):
         #   YOUR IMPLEMENTATION HERE   #
         ################################
         
+        for step in range(self.options.steps):
+            probs = self.behavior_policy(state)
+            action = np.random.choice(self.env.action_space.n, p=probs)
+            next_state, reward, done, _ = self.step(action)
+            episode.append((state, action, reward))
+            state = next_state
+            if done:
+                break
+
+        G = 0.0
+        W = 1.0
+        
+        for (state, action, reward) in reversed(episode):
+            G = reward + self.options.gamma * G
+            self.C[state][action] += W
+            self.Q[state][action] += (W / self.C[state][action]) * (G - self.Q[state][action])
+            target_action = self.target_policy(state)
+            if action != target_action:
+                break  
+            
+            W = W * (1.0 / self.behavior_policy(state)[action])       
 
     def create_random_policy(self):
         """
