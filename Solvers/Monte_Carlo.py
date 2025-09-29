@@ -61,10 +61,35 @@ class MonteCarlo(AbstractSolver):
         # An episode is an array of (state, action, reward) tuples
         episode = []
         state, _ = self.env.reset()
-        discount_factor = self.options.gamma
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        
+        for step in range(self.options.steps):
+            probs = self.policy(state)  
+            action = np.random.choice(self.env.action_space.n, p=probs)
+            next_state, reward, done, _ = self.step(action)
+            episode.append((state, action, reward))
+            state = next_state
+            if done:
+                break
+
+        G = 0.0
+        first_seen = set() 
+        gamma = self.options.gamma
+
+    
+        for t in range(len(episode)-1, -1, -1):
+            s, a, r = episode[t]
+            G = r + gamma * G  
+            if (s, a) not in first_seen:
+                first_seen.add((s, a))
+                
+                self.returns_sum[(s, a)] += G
+                self.returns_count[(s, a)] += 1
+                self.Q[s][a] = self.returns_sum[(s, a)] / self.returns_count[(s, a)]
+        if first_seen:  
+            self.policy = self.make_epsilon_greedy_policy()
 
     def __str__(self):
         return "Monte Carlo"
@@ -86,10 +111,16 @@ class MonteCarlo(AbstractSolver):
         """
         nA = self.env.action_space.n
 
-        def policy_fn(observation):
+        def policy_fn(observation) -> np.ndarray:
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
+            q = self.Q[observation]                  # np.array shape (nA,)
+            probs = np.ones(nA, dtype=float) * (self.options.epsilon / nA)
+            best_action = np.argmax(q)
+            probs[best_action] += (1.0 - self.options.epsilon)
+            return probs
+            
 
         return policy_fn
 
@@ -109,6 +140,8 @@ class MonteCarlo(AbstractSolver):
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
+            q = self.Q[state]
+            return np.argmax(q)
 
 
         return policy_fn
