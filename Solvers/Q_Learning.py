@@ -1,6 +1,6 @@
 # Licensing Information:  You are free to use or extend this codebase for
 # educational purposes provided that (1) you do not distribute or publish
-# solutions, (2) you retain this notice, and (3) inform Guni Sharon at 
+# solutions, (2) you retain this notice, and (3) inform Guni Sharon at
 # guni@tamu.edu regarding your usage (relevant statistics is reported to NSF).
 # The development of this assignment was supported by NSF (IIS-2238979).
 # Contributors:
@@ -50,10 +50,22 @@ class QLearning(AbstractSolver):
 
         # Reset the environment
         state, _ = self.env.reset()
+        policy_fn = self.create_greedy_policy()
 
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        for _ in range(self.options.steps):
+            action = policy_fn(state)
+            next_state, reward, done, _ = self.step(action)
+            self.Q[state][action] += self.options.alpha * (
+                reward
+                + self.options.gamma * np.max(self.Q[next_state])
+                - self.Q[state][action]
+            )
+            state = next_state
+            if done:
+                break
 
     def __str__(self):
         return "Q-Learning"
@@ -75,7 +87,8 @@ class QLearning(AbstractSolver):
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
-            return -1
+            action = np.argmax(self.Q[state])
+            return action
 
         return policy_fn
 
@@ -93,6 +106,12 @@ class QLearning(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        nA = self.env.action_space.n
+        q = self.Q[state]
+        probs = np.ones(nA, dtype=float) * (self.options.epsilon / nA)
+        best_action = np.argmax(q)
+        probs[best_action] += 1.0 - self.options.epsilon
+        return probs
 
 
 class ApproxQLearning(QLearning):
@@ -123,6 +142,30 @@ class ApproxQLearning(QLearning):
         #   YOUR IMPLEMENTATION HERE   #
         ################################
 
+        for _ in range(self.options.steps):
+            action_probs = self.epsilon_greedy(state)
+            action = np.random.choice(self.env.action_space.n, p=action_probs)
+
+            next_state, reward, done, _ = self.step(action)
+
+            current_q = self.estimator.predict(state, action)
+
+            next_q_values = np.array(
+                [
+                    self.estimator.predict(next_state, a)
+                    for a in range(self.env.action_space.n)
+                ]
+            )
+            max_next_q = np.max(next_q_values)
+
+            target_q = reward + self.options.gamma * max_next_q
+
+            self.estimator.update(state, action, target_q)
+
+            state = next_state
+            if done:
+                break
+
     def __str__(self):
         return "Approx Q-Learning"
 
@@ -140,6 +183,15 @@ class ApproxQLearning(QLearning):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        nA = self.env.action_space.n
+
+        q_values = np.array([self.estimator.predict(state, a) for a in range(nA)])
+
+        probs = np.ones(nA, dtype=float) * (self.options.epsilon / nA)
+        best_action = np.argmax(q_values)
+        probs[best_action] += 1.0 - self.options.epsilon
+
+        return probs
 
     def create_greedy_policy(self):
         """
@@ -155,8 +207,8 @@ class ApproxQLearning(QLearning):
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
-            return -1
-            
+            q_values = np.array([self.estimator.predict(state, a) for a in range(nA)])
+            return np.argmax(q_values)
 
         return policy_fn
 
