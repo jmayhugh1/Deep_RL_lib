@@ -1,6 +1,6 @@
 # Licensing Information:  You are free to use or extend this codebase for
 # educational purposes provided that (1) you do not distribute or publish
-# solutions, (2) you retain this notice, and (3) inform Guni Sharon at 
+# solutions, (2) you retain this notice, and (3) inform Guni Sharon at
 # guni@tamu.edu regarding your usage (relevant statistics is reported to NSF).
 # The development of this assignment was supported by NSF (IIS-2238979).
 # Contributors:
@@ -47,6 +47,23 @@ class Sarsa(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        for _ in range(self.options.steps):
+            action_probs = self.epsilon_greedy_action(state)
+            action = np.random.choice(self.env.action_space.n, p=action_probs)
+
+            next_state, reward, done, _ = self.step(action)
+
+            next_action_probs = self.epsilon_greedy_action(next_state)
+            next_action = np.random.choice(self.env.action_space.n, p=next_action_probs)
+
+            self.Q[state][action] += self.options.alpha * (
+                reward
+                + self.options.gamma * self.Q[next_state][next_action]
+                - self.Q[state][action]
+            )
+            state = next_state
+            if done:
+                break
 
     def __str__(self):
         return "Sarsa"
@@ -63,6 +80,7 @@ class Sarsa(AbstractSolver):
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
+            return np.argmax(self.Q[state])
 
         return policy_fn
 
@@ -80,6 +98,12 @@ class Sarsa(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        nA = self.env.action_space.n
+        q = self.Q[state]
+        probs = np.ones(nA, dtype=float) * (self.options.epsilon / nA)
+        best_action = np.argmax(q)
+        probs[best_action] += 1.0 - self.options.epsilon
+        return probs
 
     def plot(self, stats, smoothing_window=20, final=False):
         plotting.plot_episode_stats(stats, smoothing_window, final=final)
